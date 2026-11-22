@@ -1,0 +1,58 @@
+MapData(
+    nb_drones=2, 
+    start='start', 
+    end='goal', 
+    zones={
+        'start': Zone(name='start', x=0, y=0, zone_type='normal', color='green', max_drones=None, line_no=4), 
+        'waypoint1': Zone(name='waypoint1', x=1, y=0, zone_type='normal', color='blue', max_drones=1, line_no=5), 
+        'waypoint2': Zone(name='waypoint2', x=2, y=0, zone_type='normal', color='blue', max_drones=1, line_no=6), 
+        'goal': Zone(name='goal', x=3, y=0, zone_type='normal', color='red', max_drones=None, line_no=7)
+    },
+    connections=[
+        Connection(zone_a='start', zone_b='waypoint1', max_link_capacity=1, line_no=9), 
+        Connection(zone_a='waypoint1', zone_b='waypoint2', max_link_capacity=1, line_no=10), 
+        Connection(zone_a='waypoint2', zone_b='goal', max_link_capacity=1, line_no=11)
+    ]
+)
+
+MapData(
+    nb_drones=2, 
+    start='start', 
+    end='goal', 
+    
+    zones={
+        'start': Zone(name='start', x=0, y=0, zone_type='normal', color='green', max_drones=None, line_no=4), 
+        'waypoint1': Zone(name='waypoint1', x=1, y=0, zone_type='normal', color='blue', max_drones=1, line_no=5),
+        'waypoint2': Zone(name='waypoint2', x=2, y=0, zone_type='normal', color='blue', max_drones=1, line_no=6), 
+        'goal': Zone(name='goal', x=3, y=0, zone_type='normal', color='red', max_drones=None, line_no=7)
+        }, 
+    connections=[
+        Connection(zone_a='start', zone_b='waypoint1', max_link_capacity=1, line_no=9), 
+        Connection(zone_a='waypoint1', zone_b='waypoint2', max_link_capacity=1, line_no=10)])
+
+
+# goalまでつながっているかチェックする関数（パーサーとは別に入れたい）
+# deque は標準ライブラリの汎用の両端キュー
+# 動作確認は、goalへの接続を戻した版と、外した版の2つで、is_reachable の結果が True / False になるかを見る
+
+from collections import deque
+
+
+def is_reachable(map_data: MapData) -> bool:
+    neighbors: dict[str, list[str]] = {name: [] for name in map_data.zones}
+    for c in map_data.connections:
+        neighbors[c.zone_a].append(c.zone_b)
+        neighbors[c.zone_b].append(c.zone_a)  # 双方向なので両側に追加
+
+    visited = {map_data.start}
+    queue = deque([map_data.start])
+    while queue:
+        current = queue.popleft()
+        if current == map_data.end:
+            return True
+        for nxt in neighbors[current]:
+            if nxt in visited or map_data.zones[nxt].zone_type == "blocked":
+                continue  # 訪問済み、または通れないゾーンは飛ばす
+            visited.add(nxt)
+            queue.append(nxt)
+    return False
