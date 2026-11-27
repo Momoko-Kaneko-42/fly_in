@@ -2,7 +2,6 @@ import sys
 from dataclasses import dataclass
 from collections import deque
 
-MAX_DRONES = 100
 ZONE_KEYS = {"zone", "color", "max_drones"}
 LINK_KEYS = {"max_link_capacity"}
 
@@ -113,7 +112,7 @@ def parse_metadata(text: str, line_no: int, allowed: set[str]) -> dict[str, str]
         if key not in allowed:
             raise ParseError(line_no, f"unknown metadata key: {key!r}")
         if key in result:
-            raise ParseError(line_no, f"duplicate metadata key: {key!r}")       
+            raise ParseError(line_no, f"duplicate metadata key: {key!r}")
         result[key] = value
     return result
 
@@ -242,48 +241,3 @@ def parse_file(path: str) -> MapData:
     if nb_drones is None or start is None or end is None:
         raise ParseError(line_no, "nb_drones, start_hub and end_hub are required")
     return MapData(nb_drones, start, end, zones, connections)
-
-
-def is_reachable(map_data: MapData) -> bool:
-    """
-    startからgoalに到達できなくても文法的に正しければパーサーはエラーにはしない。
-    パーサーとは別の段階でこの処理を入れる必要がある。
-    経路探索の前に「startからendへ行けるか」を確認し、明確に報告する
-    """
-
-    neighbors: dict[str, list[str]] = {name: [] for name in map_data.zones}
-    for c in map_data.connections:
-        neighbors[c.zone_a].append(c.zone_b)
-        neighbors[c.zone_b].append(c.zone_a)  # 双方向なので両側に追加
-
-    visited = {map_data.start}
-    queue = deque([map_data.start])
-    while queue:
-        current = queue.popleft()
-        if current == map_data.end:
-            return True
-        for nxt in neighbors[current]:
-            if nxt in visited or map_data.zones[nxt].zone_type == "blocked":
-                continue  # 訪問済み、または通れないゾーンは飛ばす
-            visited.add(nxt)
-            queue.append(nxt)
-    return False
-
-# 動作確認
-# main から parse_file("map.txt") を呼び、try/except ParseError でメッセージを表示して終了するようにしておくと、
-# map.txt をわざと壊して試すことができる(x に文字を入れる、] を消す、など)。
-
-def  main() -> None:
-    try:
-        map_data = parse_file("linear_path.txt")
-    except ParseError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-    except OSError as e:  # ファイルが無い、読めない、など
-        print(f"Error: cannot read file: {e}", file=sys.stderr)
-        sys.exit(1)
-    print(map_data)
-    print(is_reachable(map_data))
-
-if __name__ == "__main__":
-    main()
